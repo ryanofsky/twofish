@@ -1,0 +1,571 @@
+<HTML>
+<head>
+<META NAME="GENERATOR" Content="Microsoft Visual Studio 6.0">
+<TITLE>Twofish & SHA-1 Encryptor</TITLE>
+
+<script LANGUAGE=javascript>
+<!--
+
+if (document.all)
+{
+  document.writeln("<DIV ID=ieloadmessage style='position: absolute; left: 0; top: 50; width: 100%; background-color: #000000'>");
+  document.writeln("<CENTER><TABLE><TR><TD HEIGHT='100'><FONT FACE='Verdana' SIZE='3' COLOR=#FFFFFF><B>Please be patient while this page is loading...</B></FONT></TD></TR></TABLE></CENTER>");
+  document.writeln("</DIV>");
+}
+else if (document.layers)
+{
+  document.writeln("<LAYER ID=navloadmessage TOP=20 LEFT=0 BGCOLOR=#000000 WIDTH=100%>");
+  document.writeln("<CENTER><TABLE><TR><TD HEIGHT='100'><FONT FACE='Verdana' SIZE='3' COLOR=#FFFFFF><B>Please be patient while this page is loading...</B></FONT></TD></TR></TABLE></CENTER>");
+  document.writeln("</LAYER>");
+}
+else
+{
+  alert("Please be patient while this page loads...");
+}
+
+// -->
+</script>
+
+<script LANGUAGE="javascript" src="binary.js"></script>
+<script LANGUAGE="javascript" src="twofish.js"></script>
+
+<script LANGUAGE=javascript>
+<!--
+function FakeOption(name,value)
+{
+  this.name = name;
+  this.value = value;
+  this.make = FakeOption_make;
+}
+function FakeOption_make()
+{
+  return new Option(this.name,this.value);
+}
+//---------------------------------------------------------
+function StringType()
+{
+  this.option1 = 1;
+  this.option2 = 0;
+  this.list1 = StringType.list1;
+  this.list2 = StringType.list2;
+  this.save = StringType_save;
+  this.load = StringType_load;
+}
+StringType.list1 = new Array();
+StringType.list2 = new Array();
+StringType.list1[0] = new FakeOption("7-bit (ISO-Latin-1)",7);
+StringType.list1[1] = new FakeOption("8-bit (ANSI)",8);
+StringType.list1[2] = new FakeOption("16-bit (UNICODE)",16);
+var p=3;
+for(var i=1; i <= 32; i++)
+  if(i!= 7 && i!=8 && i!=16)
+  {
+    StringType.list1[p] = new FakeOption(i+"-bit",i);
+      p++;
+  }; 
+  
+function StringType_save(data,string)
+{
+  var bits = this.list1[this.option1].value;
+  data.setstring(0,bits,string);
+  data.setlength((string.length+1)*bits);
+  
+  var pos = Math.ceil((string.length+1)*bits/32); //next available 32-bit slot
+  data.setlength(32*(pos+1));
+  data.setalign(32);
+  data[pos] = data.checksum(0,pos);
+}
+
+function StringType_load(data,element)
+{
+  var bits = this.list1[this.option1].value;
+  var string = data.getstring(0,bits);
+  element.value = string;
+  
+  var pos = Math.ceil((string.length+1)*bits/32); //next available 32-bit slot
+  data.setalign(32);
+  return (data[pos] == data.checksum(0,pos));
+}
+//---------------------------------------------------------
+function HexType()
+{
+  this.option1 = 3;
+  this.option2 = 7;
+  this.list1 = HexType.list1;
+  this.list2 = HexType.list2;
+  this.save = HexType_save;
+  this.load = HexType_load;
+}
+HexType.list1 = new Array();
+HexType.list2 = new Array();
+for(var i=0; i < 40; i++)
+{
+  HexType.list1[i] = new FakeOption((i+1)+" nibbles/word",i+1);
+  HexType.list2[i] = new FakeOption((i+1)+" words/line",i+1);
+}
+function HexType_save(data,string)
+{
+  data.setHexNibbles(string);
+  return true;  
+}
+function HexType_load(data,element)
+{
+  element.value = data.getHexNibbles(this.list1[this.option1].value|0,this.list2[this.option2].value|0);
+  return true;
+}
+//---------------------------------------------------------   
+function B64Type()
+{
+  this.option1 = 0;
+  this.option2 = 0;
+  this.list1 = B64Type.list1;
+  this.list2 = B64Type.list2;
+  this.save = B64Type_save;
+  this.load = B64Type_load;
+}
+B64Type.list1 = new Array();
+B64Type.list2 = new Array();
+function B64Type_save(data,string)
+{
+  return data.setBase64(string);
+}
+function B64Type_load(data,element)
+{
+  element.value = data.getBase64();
+  return true;
+}
+//---------------------------------------------------------
+function ListType()
+{
+  this.option1 = 31;
+  this.option2 = 0;
+  this.list1 = ListType.list1;
+  this.list2 = ListType.list2;
+  this.save = ListType_save;
+  this.load = ListType_load;
+}
+ListType.list1 = new Array();
+ListType.list2 = new Array();
+ListType.HEX = 0;
+ListType.UDEC = 1;
+ListType.SDEC = 2;
+for(var i=0; i < 32; i++)
+  ListType.list1[i] = new FakeOption((i+1)+"-bit",i+1);
+ListType.list2[0] = new FakeOption("Hexadecimal",ListType.HEX);
+ListType.list2[1] = new FakeOption("Unsigned Decimal",ListType.UDEC);
+ListType.list2[2] = new FakeOption("Signed Decimal",ListType.SDEC);
+function ListType_save(data,string)
+{
+  var bits = this.list1[this.option1].value - 0;
+  var decimal = (ListType.HEX == this.list2[this.option2].value-0) ? false : true;
+  var signed = (ListType.SDEC == this.list2[this.option2].value-0) ? true : false;
+  data.setlist(string,bits,decimal,signed);
+  return true;
+}
+function ListType_load(data,element)
+{
+  var bits = this.list1[this.option1].value - 0;
+  var decimal = (ListType.HEX == this.list2[this.option2].value-0) ? false : true;
+  var signed = (ListType.SDEC == this.list2[this.option2].value-0) ? true : false;
+  element.value = data.getlist(bits,decimal,signed);
+  return true;
+};
+
+//---------------------------------------------------------
+
+function Controller(form)
+{
+  this.modify = Controller_modify;
+  this.load = Controller_load;
+  this.save = Controller_save;
+  this.gettype = Controller_gettype;
+  this.showoptions = Controller_showoptions;
+  this.typeupdate = Controller_typeupdate;
+  this.optionupdate = Controller_optionupdate;
+  this.clear = Controller_clear;
+
+  this.form = form;
+  this.data = new BinData();
+  this.types = new Array(new StringType(),new HexType(), new B64Type(), new ListType());
+  this.prevtype = this.gettype();
+  this.changed = false;  
+  this.prevtype.save(this.data,this.form.data.value);
+  this.showoptions();
+
+  this.form.data.onkeydown = new Function("return this.form.controller.modify()");
+  this.form.data.onchange = new Function("return this.form.controller.modify()");
+  this.form.types.onmousedown = new Function("return this.form.controller.typeupdate()");
+  this.form.types.onclick = new Function("return this.form.controller.typeupdate()");
+  this.form.types.onchange = new Function("return this.form.controller.typeupdate()");
+  this.form.option1.onchange = new Function("return this.form.controller.optionupdate()");
+  this.form.option2.onchange = new Function("return this.form.controller.optionupdate()");
+  this.form.clear.onclick= new Function("return this.form.controller.clear()");
+};
+
+Controller.GOODSTRING = new Image();
+Controller.GOODSTRING.src = "goodstring.gif";
+Controller.BADSTRING = new Image();
+Controller.BADSTRING.src = "badstring.gif";
+
+function Controller_modify()
+{
+  if (!this.changed)
+  {
+    this.changed = true;
+    document.images[this.form.imgname.value].src = Controller.GOODSTRING.src;
+    this.form.clear.value = "Undo";
+  }  
+};
+
+function Controller_load(type)
+{
+  if (type.load(this.data,this.form.data))
+    document.images[this.form.imgname.value].src = Controller.GOODSTRING.src;
+  else
+    document.images[this.form.imgname.value].src = Controller.BADSTRING.src;
+  this.changed = false;  
+  this.form.clear.value = "Clear";
+};
+
+function Controller_save()
+{
+  if(this.changed)
+  {
+    this.prevtype.save(this.data,this.form.data.value);
+    this.form.clear.value = "Clear";
+  }
+};
+
+function Controller_gettype()
+{
+  return this.types[this.form.types.options[this.form.types.selectedIndex].value];
+};
+
+function Controller_showoptions()
+{
+  var type = this.gettype();
+  for(var i = 0; i < type.list1.length; i++)
+    this.form.option1.options[i] = type.list1[i].make();
+  for(var i = this.form.option1.options.length-1; i >= type.list1.length; i--)
+    this.form.option1.options[i] = null;
+  for(var i = 0; i < type.list2.length; i++)
+    this.form.option2.options[i] = type.list2[i].make();
+  for(var i = this.form.option2.options.length-1; i >= type.list2.length; i--)
+    this.form.option2.options[i] = null;
+  this.form.option1.selectedIndex = type.option1;  
+  this.form.option2.selectedIndex = type.option2;
+};
+
+function Controller_typeupdate()
+{
+  var type = this.gettype();
+
+  this.save();
+
+  if (this.changed || this.prevtype != type)
+    this.load(type)
+
+  if (this.prevtype != type)
+    this.showoptions();
+    
+  this.prevtype = type;  
+  return true;
+};
+
+function Controller_optionupdate(form)
+{
+  var type = this.gettype()
+  
+  type.option1 = this.form.option1.selectedIndex;
+  type.option2 = this.form.option2.selectedIndex;
+  
+  this.save();
+  this.load(type);
+  return true;
+};
+
+function Controller_clear()
+{
+  if(this.changed)
+  {
+    this.changed = false;
+    this.form.clear.value = "Clear";
+    this.load(this.gettype());
+  }
+  else
+  {
+    this.data = new BinData();
+    this.load(this.gettype());
+  }; 
+  return true; 
+}
+
+function init()
+{
+
+  if (document.all)
+    document.all.ieloadmessage.style.display = "none";
+  else if(document.layers)
+    document.layers["navloadmessage"].visibility = "hide";
+  
+  document.forms.input.controller = new Controller(document.forms.input);
+  document.forms.output.controller = new Controller(document.forms.output);
+  
+  with (document.forms.key)
+  {
+    onsubmit = new Function("makekey(this); return false;");
+    generate.onclick = new Function("return makekey(this.form)");
+    keylen.onchange = new Function("return makekey(this.form)");
+    password.focus();
+    password.select();
+  };
+  
+  with(document.forms.action)
+  {
+    encrypt.onclick = new Function("crypt(true)");
+    decrypt.onclick = new Function("crypt(false)");
+    swap.onclick = new Function("swap()");
+  };
+  
+  with (document.forms.options)
+  {  
+    ciphermode[0].onclick = new Function("return setoptions(this)");
+    ciphermode[1].onclick = new Function("return setoptions(this)");
+    ciphermode[2].onclick = new Function("return setoptions(this)");
+    fiestel[0].onclick = new Function("TwoFish.FEISTEL = true; return true;");
+    fiestel[1].onclick = new Function("TwoFish.FEISTEL = false; return true;");
+    setoptions(ciphermode[0]);
+  };
+}
+
+function makekey(form)
+{
+  var b = new BinData();
+  b.setstring(0,8,form.password.value);
+  b.setlength(form.password.value.length*8);
+  var key = b.sha1ex(form.keylen.options[form.keylen.selectedIndex].value-0);
+  form.key.value += key.getlength() + "\n";
+  form.key.value = key.getHexNibbles(8);
+  return true;
+}
+
+function setoptions(field)
+{
+  var newmode = eval(field.value);
+  if (newmode!=TwoFish.MODE_CFB1 || (newmode==TwoFish.MODE_CFB1 && window.confirm("CFB mode does not work in this version and may cause your browser to crash. Continue?")))
+  {
+    field.form._ciphermode = newmode;
+    IV = new BinData();
+    IV.setHexNibbles(field.form.IV.value);
+    IV.setlength(TwoFish.BLOCK_SIZE);
+    field.form.IV.value = IV.getHexNibbles(4);
+    return true;
+  }
+  else 
+    return false;
+}
+
+function crypt(encrypt)
+{
+  var keymat = new BinData();
+  var keylen = document.forms.key.keylen.options[document.forms.key.keylen.selectedIndex].value-0;
+  keymat.setHexNibbles(document.forms.key.key.value);
+  keymat.setlength(keylen);
+  document.forms.key.key.value = keymat.getHexNibbles(8);
+  var key = new TwoFish.Key(keymat);
+  
+  var ciphermode = document.forms.options._ciphermode;
+  var IV = null;
+  if (ciphermode!=TwoFish.MODE_ECB)
+  {
+    IV = new BinData();
+    IV.setHexNibbles(document.forms.options.IV.value);
+    IV.setlength(TwoFish.BLOCK_SIZE);
+    document.forms.options.IV.value = IV.getHexNibbles(4);
+  }
+  var cipher = new TwoFish.Cipher(ciphermode,IV);
+  with(document.forms.input.controller)
+  {
+    save();
+    load(gettype());
+    var begin = new Date();
+    document.forms.output.controller.data = encrypt ? TwoFish.Encrypt(cipher,key,data) : TwoFish.Decrypt(cipher,key,data);
+    var end = new Date();
+  };
+ 
+  with (document.forms.output.controller)
+  {
+    load(gettype());
+    document.forms.options.time.value = end-begin + " (" + Math.round(data.getlength()/8/(end-begin)*1000)  + " bytes/sec)";
+  }
+}
+
+function swap()
+{
+  with (document.forms)
+  {
+    input.controller.typeupdate();
+    output.controller.typeupdate();
+
+    var temp = input.controller;
+    input.controller = output.controller;
+    output.controller = temp;
+
+    temp = input.types.selectedIndex;
+    input.types.selectedIndex = output.types.selectedIndex;
+    output.types.selectedIndex = temp;
+    
+    input.controller.form = input;
+    output.controller.form = output;
+    
+    input.controller.prevtype = null;
+    output.controller.prevtype = null;
+
+    input.controller.typeupdate();
+    output.controller.typeupdate();
+  }
+}
+// -->
+</script>
+</head>
+<body onLoad="init();" bgcolor="#202020" text="#04ec09" link="#ffffff" vlink="#dddddd" background="back.png">
+
+<table cellspacing="0" cellpadding="0">
+<!-- ............................ KEY .............................. -->    
+
+  <tr>
+    <td valign="top">
+      <p align="right"><b><font face="Verdana" size="5">Key:</font></b></p>
+    </td>
+    <td width=600>
+      <form name=key>
+        <table width="100%">
+          <tr>
+            <td>
+              <input name=password size="44" value="Enter Password Here to Generate a Key" style="width: 380px">
+            </td><td>
+              <p align="center">
+              <input type="button" name="generate" value="Generate" style="width: 80px">
+              </p>
+            </td><td>
+              <p align="right">
+              <select name=keylen style="width: 120px">
+              <option value=256 selected >SHA-1 256-Bit</option>
+              <option value=192>SHA-1 192-Bit</option>
+              <option value=128>SHA-1 128-Bit</option>
+              </select>
+              </p>
+            </td>
+          </tr><tr>
+            <td colspan="3"><TEXTAREA cols=72 name=key rows=1 wrap="soft" style="width: 600px"></TEXTAREA>
+            </td>
+          </tr>
+        </table>
+      </form>
+    </td>
+  </tr>
+
+<!-- ........................... INPUT ............................. -->      
+
+  <tr>
+    <td valign="top">
+      <p align="right"><b><font face="Verdana" size="5">Input:</font></b></p>
+      <p align="center"><IMG border=0 height=68 name=inimg src="goodstring.gif" width=60></p>
+    </td><td width=600>
+      <form name=input><input type="hidden" name="imgname" value="inimg">
+        <table width="100%" border=0 cellPadding=1 cellSpacing=1>
+          <tr>
+            <td valign=top>
+              <TEXTAREA name="data" cols="40" rows="6" wrap="soft" style="width: 360px">Input goes here!</TEXTAREA> 
+            </td><td valign=top>
+              <select name=types size=6 style="width: 100px">
+              <option value=0 selected>String</option>
+              <option value=1>Hex Nibbles</option>
+              <option value=2>Base64</option>
+              <option value=3>Integer List</option>
+              </select>
+            </td><td valign=top>
+              <p><select name="option1" STYLE="WIDTH: 115px"><option selected>-------------------</option><option></option><option></option><option></option><option></option><option></option><option></option><option></option><option></option><option></option><option></option></select></p>
+              <p><select name="option2" STYLE="WIDTH: 115px"><option selected>-------------------</option><option></option><option></option><option></option><option></option><option></option><option></option><option></option><option></option><option></option><option></option></select></p>
+              <center><p><input name=clear type=button value=Clear></p></center>
+            </td>
+          </tr>
+        </table>
+      </form>
+    </td>
+  </tr>
+
+<!-- ............................ ACTION ........................... -->      
+  <tr>
+    <td>&nbsp;</td><td width="600" height="50" valign="middle">
+      <form name="action"><center>
+        <input type="button" name="encrypt" value="Encrypt">
+        <input type="button" name="decrypt" value="Decrypt">
+        <input type="button" name="swap" value="Swap"></center>
+      </form>
+    </td>
+  </tr><tr>
+  
+<!-- ............................ OUTPUT ........................... -->        
+    <td valign="top">
+      <p align="right"><b><font face="Verdana" size="5">Output:</font></b></p>
+      <p align="center"><IMG border=0 height=68 name=outimg src="goodstring.gif" width=60></p>
+    </td><td width=600>
+      <form name=output><input type="hidden" name="imgname" value="outimg">
+        <table width="100%" border=0 cellPadding=1 cellSpacing=1>
+          <tr>
+            <td valign=top>
+              <TEXTAREA name="data" cols="40" rows="6" wrap="soft" style="width: 360px"></TEXTAREA> 
+            </td><td valign=top>
+              <select name=types size=6 style="width: 100px">
+              <option value=0>String</option>
+              <option value=1>Hex Nibbles</option>
+              <option value=2 selected>Base64</option>
+              <option value=3>Integer List</option>
+              </select>
+            </td><td valign=top>
+              <p><select name="option1" STYLE="WIDTH: 115px"><option selected>-------------------</option><option></option><option></option><option></option><option></option><option></option><option></option><option></option><option></option><option></option><option></option></select></p>
+              <p><select name="option2" STYLE="WIDTH: 115px"><option selected>-------------------</option><option></option><option></option><option></option><option></option><option></option><option></option><option></option><option></option><option></option><option></option></select></p>
+              <center><p><input name=clear type=button value=Clear></p></center>
+            </td>
+          </tr>
+        </table>
+      </form>
+    </td>
+  </tr>
+<!-- ........................... OPTIONS ........................... -->        
+  <tr>
+    <td valign="top">
+      <p align="right"><B><font face=Verdana size=5>Options:</font></B></p>
+    </td><td width=600>
+      <form name=options>
+        <table width="100%">
+        <tr>
+          <td width="6%">&nbsp;</td>
+          <td valign="top" width="47%">
+            <p>
+              <font face=Verdana size=2><strong>Chaining Mode</strong><BR>
+              <input name=ciphermode type=radio value="TwoFish.MODE_ECB" checked>ECB
+              <input name=ciphermode type=radio value="TwoFish.MODE_CBC">CBC
+              <input name=ciphermode type=radio value="TwoFish.MODE_CFB1">CFB1</font>
+            </p><p>
+              <font face=Verdana size=2><strong>Feistel? (slower)</strong><BR>
+              <input name=fiestel type=radio>Yes
+              <input name=fiestel type=radio checked>No</font>
+            </p>
+          </td><td valign="top" width="47%">
+            <p>
+              <font face=Verdana size=2><strong>Initialization Vector (IV)</strong></font><BR><TEXTAREA cols=40 rows="1" name=IV wrap="soft"></TEXTAREA>
+            </p><p>
+              <font face=Verdana size=2><strong>Encryption Time (ms)</strong></font><BR>
+              <input name=time value="0" size="20" disabled>
+            </p>
+          </td>
+        </tr>
+        </table>
+      </form>
+    </td>
+  </tr>
+</table>
+</body>
+</HTML>

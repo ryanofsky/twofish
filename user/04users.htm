@@ -1,0 +1,99 @@
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<meta name="GENERATOR" content="Microsoft FrontPage 4.0">
+<meta name="ProgId" content="FrontPage.Editor.Document">
+<title>HTML Class</title>
+
+<script language="javascript">
+<!--
+
+function clickies(element,event)
+{
+  element.state = new Array(element.options.length);
+
+  var s = new String();
+
+  for(var i=0; i < element.options.length; i++)
+  {
+     element.state[i] = element.options[i].selected;   
+     s += element.state[i] + " ";
+  }   
+  
+  document.forms.Q.T1.value = s;
+  return true;
+
+//  event.ctrlKey = true;
+}
+
+function onclickies(element,event)
+{
+  if (element.state)
+  {
+    var s = new String();
+    
+    var x = element.selectedIndex;
+    
+    for(var i=0; i < element.state.length; i++)
+    {
+       if (i!=x) element.options[i].selected =  element.state[i];
+       if (i==x) element.options[i].selected = !element.state[i];
+       //element.options[i].selected = (i != x) ? element.state[i] : !element.options[x].selected;
+       s += element.state[i] + " ";
+    }   
+    document.forms.Q.T1.value = s.toUpperCase() + x;
+  }  
+  element.state = null;
+  return true;
+}
+
+
+
+// -->
+</script>
+
+
+</head>
+
+<body>
+
+<p>HTML Class</p>
+<form name="Q">
+  <table border="0" cellpadding="0" cellspacing="0">
+    <tr>
+      <td valign="top">Users:<br>
+        <select size="8" name="D1">
+          <option selected value="../cool.html">My URL (123)</option>
+        </select>
+      </td>
+      <td valign="top">User Name:<br>
+        <input type="text" name="Main" size="20" value="My URL">
+        <p>Password:<br>
+        <input type="text" name="T1" size="20"><br>
+        <br>
+        </p>
+      </td>
+      <td valign="top">Destination URL:<br>
+        <select size="1" name="dest">
+          <option selected>My URL (../cool.html)</option>
+        </select>
+        <p>Access Rights (multiple select):<br>
+        <select size="4" name="D2" multiple onchange="return onclickies(this,event);" onmouseup="return onclickies(this,event);" onmousedown="return clickies(this,event);">
+          <option selected>Red</option>
+          <option>Green</option>
+          <option>Blue</option>
+        </select></p>
+      </td>
+    </tr>
+    <tr>
+      <td><input type="button" value="Remove" name="Remove"></td>
+      <td colspan="2" align="center"><input type="button" value="Save" name="add"></td>
+    </tr>
+  </table>
+</form>
+<p>&nbsp;</p>
+
+</body>
+
+</html>
