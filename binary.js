@@ -25,6 +25,12 @@ function DWORD(a,b,c,d)
   return ((a & 0xff) << 24) | ((b & 0xff) << 16) | ((c & 0xff) << 8) | (d & 0xff)
 };
 
+function BSWAP(dw)
+{
+    return (((dw << 24) & 0xff000000) | ((dw << 8) & 0xff0000)
+            | ((dw >> 8 ) & 0xff00) | ((dw >>> 24) & 0xff));
+}
+
 function BYTE(dw,pos) // extract byte
 {
   pos &= 3;

@@ -288,7 +288,7 @@ TwoFish.numRounds = new Array(0,TwoFish.ROUNDS_128,TwoFish.ROUNDS_192,TwoFish.RO
 -****************************************************************************/
 function TwoFish_f32(x,k32,keyLen)
 {
-  var b = x;
+  var b = BSWAP(x);
   
   /* Run each byte thru 8x8 S-boxes, xoring with key byte at each stage. */
   /* Note that each byte goes through a different combination of S-boxes.*/
@@ -479,7 +479,7 @@ function TwoFish_Cipher(mode,IV)
   if ((mode != TwoFish.MODE_ECB) && (IV))  /* parse the IV */
   {
     for (var i=0;i<TwoFish.BLOCK_SIZE/32;i++)  
-      this.iv32[i] = IV[i];
+      this.iv32[i] = BSWAP(IV[i]);
   }
 };
 TwoFish.Cipher = TwoFish_Cipher;
@@ -558,7 +558,7 @@ function TwoFish_Encrypt(cipher,key,input)
   {
     for (var i=0;i<TwoFish.BLOCK_SIZE/32;i++)	/* copy in the block, add whitening */
     {
-      x[i]=input[i+n/32] ^ key.subKeys[TwoFish.input_WHITEN+i];
+      x[i]=BSWAP(input[i+n/32]) ^ key.subKeys[TwoFish.input_WHITEN+i];
       if (cipher.mode == TwoFish.MODE_CBC)
         x[i] ^= cipher.iv32[i];
     }
@@ -601,9 +601,9 @@ function TwoFish_Encrypt(cipher,key,input)
 
     for (i=0;i<TwoFish.BLOCK_SIZE/32;i++)	/* copy out, with whitening */
     {
-      outBuffer[i+n/32] = x[i] ^ key.subKeys[TwoFish.OUTPUT_WHITEN+i];
+      outBuffer[i+n/32] = BSWAP(x[i] ^ key.subKeys[TwoFish.OUTPUT_WHITEN+i]);
       if (cipher.mode == TwoFish.MODE_CBC)
-        cipher.iv32[i] = outBuffer[i+n/32];
+        cipher.iv32[i] = BSWAP(outBuffer[i+n/32]);
     };
   }
   outBuffer.setlength(inputLen);
@@ -683,7 +683,7 @@ function TwoFish_Decrypt(cipher,key,input)
   for (var n=0;n<inputLen;n+=TwoFish.BLOCK_SIZE)
   {
     for (i=0;i<TwoFish.BLOCK_SIZE/32;i++)	/* copy in the block, add whitening */
-      x[i]=input[i+n/32] ^ key.subKeys[TwoFish.OUTPUT_WHITEN+i];
+      x[i]=BSWAP(input[i+n/32]) ^ key.subKeys[TwoFish.OUTPUT_WHITEN+i];
 
     for (var r=rounds-1;r>=0;r--)      /* main Twofish decryption loop */
     {
@@ -708,9 +708,9 @@ function TwoFish_Decrypt(cipher,key,input)
       if (cipher.mode == TwoFish.MODE_CBC)
       {
         x[i] ^= cipher.iv32[i];
-        cipher.iv32[i] = input[i+n/32];
+        cipher.iv32[i] = BSWAP(input[i+n/32]);
       }
-      outBuffer[i+n/32] = x[i];
+      outBuffer[i+n/32] = BSWAP(x[i]);
     };
   }
   input.setlength(oldlength);
